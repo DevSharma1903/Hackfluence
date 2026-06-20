@@ -38,11 +38,28 @@ export interface CommentThread {
 export interface TopicOpportunity {
   title: string;
   score: number;
-  growth: string;
-  validation: "Strong" | "Moderate";
+  growth?: string;
+  validation?: "Strong" | "Moderate";
   why: string;
   signals: string[];
-  tags: string[];
+  tags?: string[];
+  suggestedVideos: string[];
+  evidenceComments: CommentThread[];
+  evidenceVideos: VideoItem[];
+  scoreBreakdown?: {
+    audienceStrength: number;
+    contentRelevance: number;
+    supportingEvidence: number;
+    audienceSignal?: number;
+    contentAlignment?: number;
+    evidenceStrength?: number;
+    trendGrowth?: number;
+  };
+  trendData?: {
+    growth: number;
+    status: string;
+    timeline: { date: string; value: number }[];
+  };
 }
 
 export interface DiscoveredTopic {
@@ -50,6 +67,9 @@ export interface DiscoveredTopic {
   commentCount: number;
   comments: CommentThread[];
   videos: VideoItem[];
+  isInferred?: boolean;
+  inferredNote?: string;
+  explanation?: string;
 }
 
 export interface AnalysisResult {
