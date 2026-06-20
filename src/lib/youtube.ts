@@ -6,6 +6,7 @@ import type {
   AnalysisResult,
   TopicOpportunity,
 } from "./types";
+import { runNlpAnalysis } from "./nlp";
 
 const BASE = "https://www.googleapis.com/youtube/v3";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -295,18 +296,24 @@ function deriveOpportunities(videos: VideoItem[]): TopicOpportunity[] {
 // Main analysis entry point
 // ---------------------------------------------------------------------------
 
-export async function analyzeChannel(input: string): Promise<AnalysisResult> {
+export async function analyzeChannel(
+  input: string,
+  onProgress?: (msg: string) => void
+): Promise<AnalysisResult> {
+  onProgress?.("Fetching channel data…");
   const { channelId, snippet, stats } = await resolveChannel(input);
 
+  onProgress?.("Fetching top videos…");
   const [topVideos] = await Promise.all([getTopVideos(channelId, 10)]);
 
   // Get comments from the top video if available
+  onProgress?.("Fetching comments…");
   const topComments: CommentThread[] =
     topVideos.length > 0 ? await getVideoComments(topVideos[0].videoId, 10) : [];
 
   const opportunities = deriveOpportunities(topVideos);
 
-  return {
+  const baseResult: AnalysisResult = {
     channel: snippet,
     stats,
     topVideos,
@@ -314,4 +321,7 @@ export async function analyzeChannel(input: string): Promise<AnalysisResult> {
     opportunities,
     analyzedAt: new Date().toISOString(),
   };
+
+  // Run NLP analysis (sentence transformers)
+  return runNlpAnalysis(baseResult, onProgress);
 }

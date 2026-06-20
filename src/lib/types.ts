@@ -51,6 +51,12 @@ export interface AnalysisResult {
   topComments: CommentThread[]; // from the most popular video
   opportunities: TopicOpportunity[];
   analyzedAt: string;
+  nlp?: {
+    keyTerms: TermImportance[];
+    topSentences: ExtractedSentence[];
+    trends: TrendTerm[];
+    modelUsed: string;
+  };
 }
 export interface ExtractedSentence {
   text: string;

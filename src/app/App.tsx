@@ -27,11 +27,12 @@ import {
   ExternalLink,
   Loader2,
   AlertCircle,
+  Brain,
 } from "lucide-react";
 import { analyzeChannel } from "../lib/youtube";
 import type { AnalysisResult } from "../lib/types";
 
-type Screen = "analyze" | "dashboard" | "topics" | "recommendations";
+type Screen = "analyze" | "dashboard" | "topics" | "recommendations" | "nlp";
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -79,10 +80,12 @@ function StrengthBadge({ strength }: { strength: string }) {
 function AnalyzeScreen({
   onAnalyze,
   loading,
+  loadingLabel,
   error,
 }: {
   onAnalyze: (url: string) => void;
   loading: boolean;
+  loadingLabel: string;
   error: string | null;
 }) {
   const [url, setUrl] = useState("");
@@ -131,7 +134,7 @@ function AnalyzeScreen({
               {loading ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Analyzing…
+                  <span className="truncate max-w-[160px]">{loadingLabel || "Analyzing…"}</span>
                 </>
               ) : (
                 "Analyze Channel"
@@ -779,31 +782,219 @@ function RecommendationsScreen({ data }: { data: AnalysisResult }) {
 // ---------------------------------------------------------------------------
 // Root App
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// NLP Screen
+// ---------------------------------------------------------------------------
+function NlpScreen({ data }: { data: AnalysisResult }) {
+  const nlp = data.nlp;
+  if (!nlp) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+        NLP analysis not available for this result.
+      </div>
+    );
+  }
+
+  const maxScore = Math.max(...nlp.keyTerms.map((t) => t.score), 0.001);
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <Brain size={18} className="text-accent" />
+          <h1
+            className="text-2xl font-semibold text-foreground tracking-tight"
+            style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
+          >
+            NLP Insights
+          </h1>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Sentence-transformer analysis · model:{" "}
+          <span className="font-mono text-xs">{nlp.modelUsed}</span>
+        </p>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Key Terms", value: String(nlp.keyTerms.length) },
+          { label: "Key Sentences", value: String(nlp.topSentences.length) },
+          { label: "Trend Terms", value: String(nlp.trends.length) },
+        ].map((c) => (
+          <div key={c.label} className="bg-card border border-border rounded-xl p-4">
+            <p className="text-xs text-muted-foreground mb-2">{c.label}</p>
+            <p className="text-2xl font-semibold text-accent" style={{ fontFamily: "'DM Mono', monospace" }}>
+              {c.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Key Terms bar chart */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h2
+          className="text-sm font-semibold text-foreground mb-4"
+          style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
+        >
+          Term Importance
+          <span className="ml-2 text-xs font-normal text-muted-foreground">(cosine similarity to document embedding)</span>
+        </h2>
+        <div className="space-y-2.5">
+          {nlp.keyTerms.slice(0, 15).map((t) => {
+            const pct = Math.round((t.score / maxScore) * 100);
+            const tier =
+              pct >= 80 ? "bg-indigo-500" : pct >= 55 ? "bg-violet-500" : "bg-slate-500";
+            return (
+              <div key={t.term}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-foreground capitalize">{t.term}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground" style={{ fontFamily: "'DM Mono', monospace" }}>
+                      ×{t.frequency}
+                    </span>
+                    <span className="text-xs font-medium text-foreground/70 w-10 text-right" style={{ fontFamily: "'DM Mono', monospace" }}>
+                      {t.score.toFixed(3)}
+                    </span>
+                  </div>
+                </div>
+                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${tier} rounded-full transition-all`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Trend surface */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h2
+            className="text-sm font-semibold text-foreground"
+            style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
+          >
+            Trend Surface
+            <span className="ml-2 text-xs font-normal text-muted-foreground">(importance × view share)</span>
+          </h2>
+        </div>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-border">
+              {["Term", "Importance", "View-Weighted", "Momentum"].map((h) => (
+                <th key={h} className="text-left text-xs font-medium text-muted-foreground px-5 py-3">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {nlp.trends.map((tr) => (
+              <tr key={tr.term} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">
+                <td className="px-5 py-3 text-sm font-medium text-foreground capitalize">{tr.term}</td>
+                <td className="px-5 py-3 text-sm text-foreground/70" style={{ fontFamily: "'DM Mono', monospace" }}>
+                  {tr.importanceScore.toFixed(3)}
+                </td>
+                <td className="px-5 py-3 text-sm text-emerald-400" style={{ fontFamily: "'DM Mono', monospace" }}>
+                  {tr.viewWeightedScore.toFixed(4)}
+                </td>
+                <td className="px-5 py-3">
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
+                      tr.momentum === "Rising"
+                        ? "text-emerald-400 bg-emerald-500/8 border-emerald-500/15"
+                        : "text-slate-400 bg-slate-500/8 border-slate-500/15"
+                    }`}
+                  >
+                    <span className={`w-1 h-1 rounded-full ${
+                      tr.momentum === "Rising" ? "bg-emerald-400" : "bg-slate-400"
+                    }`} />
+                    {tr.momentum}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Key Sentences */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h2
+          className="text-sm font-semibold text-foreground mb-4"
+          style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
+        >
+          Most Semantically Central Sentences
+        </h2>
+        <div className="space-y-3">
+          {nlp.topSentences.map((s, i) => {
+            const sourceColor =
+              s.source === "title"
+                ? "text-indigo-400 bg-indigo-500/8 border-indigo-500/15"
+                : s.source === "description"
+                ? "text-violet-400 bg-violet-500/8 border-violet-500/15"
+                : "text-amber-400 bg-amber-500/8 border-amber-500/15";
+            return (
+              <div
+                key={i}
+                className="flex gap-3 py-3 border-b border-border last:border-0"
+              >
+                <div className="flex flex-col items-center gap-1.5 shrink-0 pt-0.5">
+                  <span
+                    className={`text-xs font-medium px-1.5 py-0.5 rounded border ${sourceColor}`}
+                  >
+                    {s.source}
+                  </span>
+                  <span
+                    className="text-xs text-muted-foreground"
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  >
+                    {s.score.toFixed(3)}
+                  </span>
+                </div>
+                <p className="text-sm text-foreground/80 leading-relaxed">{s.text}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const navItems: { id: Screen; label: string; icon: React.ReactNode }[] = [
   { id: "analyze", label: "Analyze Channel", icon: <Search size={15} /> },
   { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={15} /> },
   { id: "topics", label: "Topic Analysis", icon: <TrendingUp size={15} /> },
   { id: "recommendations", label: "Recommendations", icon: <Lightbulb size={15} /> },
+  { id: "nlp", label: "NLP Insights", icon: <Brain size={15} /> },
 ];
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("analyze");
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("Analyzing…");
   const [error, setError] = useState<string | null>(null);
 
   const handleAnalyze = async (url: string) => {
     if (!url.trim()) return;
     setLoading(true);
+    setLoadingLabel("Starting…");
     setError(null);
     try {
-      const result = await analyzeChannel(url.trim());
+      const result = await analyzeChannel(url.trim(), (msg) => setLoadingLabel(msg));
       setAnalysisData(result);
       setScreen("dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
     } finally {
       setLoading(false);
+      setLoadingLabel("Analyzing…");
     }
   };
 
@@ -892,7 +1083,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto scrollbar-none">
         {screen === "analyze" && (
-          <AnalyzeScreen onAnalyze={handleAnalyze} loading={loading} error={error} />
+          <AnalyzeScreen onAnalyze={handleAnalyze} loading={loading} loadingLabel={loadingLabel} error={error} />
         )}
         {screen === "dashboard" && analysisData && (
           <DashboardScreen data={analysisData} onViewTopic={handleViewTopic} />
@@ -901,6 +1092,7 @@ export default function App() {
         {screen === "recommendations" && analysisData && (
           <RecommendationsScreen data={analysisData} />
         )}
+        {screen === "nlp" && analysisData && <NlpScreen data={analysisData} />}
       </main>
     </div>
   );
