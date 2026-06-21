@@ -14,10 +14,15 @@ import {
   TrendingUp,
   Lightbulb,
   CreditCard,
+  Lock,
+  Sparkles,
+  CheckCircle2,
+  TrendingDown,
+  BarChart3,
 } from "lucide-react";
 import { analyzeChannel } from "../lib/youtube";
 import type { AnalysisResult, DiscoveredTopic } from "../lib/types";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip } from "recharts";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, BarChart, Bar, Cell, PieChart, Pie } from "recharts";
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -26,7 +31,7 @@ function formatCount(n: number): string {
 }
 
 type Tab = "audience" | "content";
-type View = "topics" | "trends" | "recommendations" | "pricing";
+type View = "topics" | "trends" | "recommendations" | "pricing" | "analytics";
 
 const QUIRKY_PHRASES = [
   "Calibrating semantic laser beams…",
@@ -73,6 +78,8 @@ export default function App() {
     }
   };
 
+  const [showUpgradeModal, setShowUpgradeModal] = useState<string | null>(null);
+
   useEffect(() => {
     if (!loading) return;
     const interval = setInterval(() => {
@@ -87,14 +94,15 @@ export default function App() {
 
     // Plan check
     if ((currentPlan === "free" || currentPlan === "personal") && !isJerryRigEverything(url)) {
-      setError("Your current plan (Free/Personal) is restricted to analyzing the creator @JerryRigEverything. Please upgrade to Universal Lite or Universal Max to analyze other creators.");
+      setShowUpgradeModal("other_creator");
       return;
     }
 
     setLoading(true);
     setLoadingLabel("Starting…");
     try {
-      const result = await analyzeChannel(url.trim(), (msg) => setLoadingLabel(msg));
+      const limit = currentPlan === "free" ? 10 : currentPlan === "personal" ? 15 : currentPlan === "lite" ? 15 : 30;
+      const result = await analyzeChannel(url.trim(), (msg) => setLoadingLabel(msg), undefined, limit);
       setAnalysisData(result);
       setSelectedAudienceIdx(0);
       setSelectedContentIdx(0);
@@ -118,7 +126,7 @@ export default function App() {
 
   const audienceTopics = analysisData?.nlp?.audienceTopics || [];
   const contentTopics = analysisData?.nlp?.contentTopics || [];
-  
+
   const topics = activeTab === "audience" ? audienceTopics : contentTopics;
   const activeTopicIdx = activeTab === "audience" ? selectedAudienceIdx : selectedContentIdx;
   const activeTopic: DiscoveredTopic | undefined = topics[activeTopicIdx];
@@ -145,9 +153,8 @@ export default function App() {
           <div className="space-y-1.5">
             <button
               onClick={handleReset}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${
-                !analysisData ? "bg-[#27272a] text-[#fafafa]" : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
-              }`}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${!analysisData ? "bg-[#27272a] text-[#fafafa]" : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
+                }`}
             >
               <Search size={14} />
               Analyze Channel
@@ -156,25 +163,44 @@ export default function App() {
               <>
                 <button
                   onClick={() => setActiveView("trends")}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${
-                    activeView === "trends"
-                      ? "bg-[#18181b] text-[#fafafa] border border-[#27272a]/40"
-                      : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
-                  }`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${activeView === "trends"
+                    ? "bg-[#18181b] text-[#fafafa] border border-[#27272a]/40"
+                    : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
+                    }`}
                 >
                   <TrendingUp size={14} />
                   Trends Analysis
                 </button>
                 <button
                   onClick={() => setActiveView("recommendations")}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${
-                    activeView === "recommendations"
-                      ? "bg-[#18181b] text-[#fafafa] border border-[#27272a]/40"
-                      : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
-                  }`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${activeView === "recommendations"
+                    ? "bg-[#18181b] text-[#fafafa] border border-[#27272a]/40"
+                    : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
+                    }`}
                 >
                   <Lightbulb size={14} />
                   Recommendations
+                </button>
+                <button
+                  onClick={() => {
+                    if (currentPlan === "free") {
+                      setShowUpgradeModal("analytics");
+                    } else {
+                      setActiveView("analytics");
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${activeView === "analytics"
+                    ? "bg-[#18181b] text-[#fafafa] border border-[#27272a]/40"
+                    : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
+                    }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <BarChart3 size={14} />
+                    <span>Analytics</span>
+                  </div>
+                  {currentPlan === "free" && (
+                    <Lock size={12} className="text-[#71717a] shrink-0" />
+                  )}
                 </button>
               </>
             )}
@@ -182,11 +208,10 @@ export default function App() {
             {/* Pricing Button */}
             <button
               onClick={() => setActiveView("pricing")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${
-                activeView === "pricing"
-                  ? "bg-[#18181b] text-[#fafafa] border border-[#27272a]/40"
-                  : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
-              }`}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-all text-left ${activeView === "pricing"
+                ? "bg-[#18181b] text-[#fafafa] border border-[#27272a]/40"
+                : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]"
+                }`}
             >
               <CreditCard size={14} />
               Pricing Plans
@@ -257,9 +282,8 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Free Plan */}
-                <div className={`p-6 border rounded-lg flex flex-col justify-between hover:border-[#fafafa]/25 transition-all space-y-6 ${
-                  currentPlan === "free" ? "bg-[#18181b] border-[#fafafa]" : "bg-[#18181b]/50 border-[#27272a]"
-                }`}>
+                <div className={`p-6 border rounded-lg flex flex-col justify-between hover:border-[#fafafa]/25 transition-all space-y-6 ${currentPlan === "free" ? "bg-[#18181b] border-[#fafafa]" : "bg-[#18181b]/50 border-[#27272a]"
+                  }`}>
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
@@ -274,65 +298,73 @@ export default function App() {
                       <span className="text-3xl font-mono font-bold text-[#fafafa]">$0</span>
                       <span className="text-xs text-[#a1a1aa]">/ month</span>
                     </div>
-                    <p className="text-xs text-[#a1a1aa] leading-relaxed">
-                      Basic channel breakdown with 3-4 recommendations per channel. Restricted to personal channels (@JerryRigEverything).
-                    </p>
+                    <ul className="text-xs text-[#a1a1aa] space-y-2 pt-2 border-t border-[#27272a]/60">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Basic channel analysis</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Limited recent videos</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> 3-4 recommendations</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Trends preview</li>
+                    </ul>
                   </div>
                   <button
-                    onClick={() => setCurrentPlan("free")}
-                    className={`w-full py-2.5 text-xs font-semibold rounded-md transition-all ${
-                      currentPlan === "free"
-                        ? "bg-[#fafafa] text-[#09090b]"
-                        : "bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa]"
-                    }`}
+                    onClick={() => {
+                      setCurrentPlan("free");
+                      setError(null);
+                    }}
+                    className={`w-full py-2.5 text-xs font-semibold rounded-md transition-all ${currentPlan === "free"
+                      ? "bg-[#fafafa] text-[#09090b]"
+                      : "bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa]"
+                      }`}
                   >
                     Get Free
                   </button>
                 </div>
 
                 {/* Personal Plan */}
-                <div className={`p-6 border rounded-lg flex flex-col justify-between hover:border-[#fafafa]/25 transition-all space-y-6 ${
-                  currentPlan === "personal" ? "bg-[#18181b] border-[#fafafa]" : "bg-[#18181b]/50 border-[#27272a]"
-                }`}>
+                <div className={`p-6 border rounded-lg flex flex-col justify-between hover:border-[#fafafa]/25 transition-all space-y-6 ${currentPlan === "personal" ? "bg-[#18181b] border-[#fafafa]" : "bg-[#18181b]/50 border-[#27272a]"
+                  }`}>
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="text-base font-bold text-[#fafafa]">Personal</h4>
-                        <p className="text-[11px] text-[#a1a1aa] mt-1">Extensive Personal Analysis</p>
+                        <p className="text-[11px] text-[#a1a1aa] mt-1">Deep Channel Analysis</p>
                       </div>
                       {currentPlan === "personal" && (
                         <span className="text-[9px] bg-[#fafafa] text-[#09090b] font-bold px-2 py-0.5 rounded-full uppercase">Active</span>
                       )}
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-mono font-bold text-[#fafafa]">$19</span>
+                      <span className="text-3xl font-mono font-bold text-[#fafafa]">$5</span>
                       <span className="text-xs text-[#a1a1aa]">/ month</span>
                     </div>
-                    <p className="text-xs text-[#a1a1aa] leading-relaxed">
-                      Deep-dive reports with 5-7 recommendations. Restricted to personal channels (@JerryRigEverything) with custom Groq support.
-                    </p>
+                    <ul className="text-xs text-[#a1a1aa] space-y-2 pt-2 border-t border-[#27272a]/60">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Everything in Free</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Analytics tab access</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> More videos analyzed</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Deeper insights & recommendations</li>
+                    </ul>
                   </div>
                   <button
-                    onClick={() => setCurrentPlan("personal")}
-                    className={`w-full py-2.5 text-xs font-semibold rounded-md transition-all ${
-                      currentPlan === "personal"
-                        ? "bg-[#fafafa] text-[#09090b]"
-                        : "bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa]"
-                    }`}
+                    onClick={() => {
+                      setCurrentPlan("personal");
+                      setError(null);
+                    }}
+                    className={`w-full py-2.5 text-xs font-semibold rounded-md transition-all ${currentPlan === "personal"
+                      ? "bg-[#fafafa] text-[#09090b]"
+                      : "bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa]"
+                      }`}
                   >
                     Get Personal
                   </button>
                 </div>
 
                 {/* Universal Lite Plan */}
-                <div className={`p-6 border rounded-lg flex flex-col justify-between relative overflow-hidden space-y-6 ${
-                  currentPlan === "lite" ? "bg-[#18181b] border-[#fafafa]" : "bg-[#18181b]/50 border-[#27272a]"
-                }`}>
+                <div className={`p-6 border rounded-lg flex flex-col justify-between relative overflow-hidden space-y-6 ${currentPlan === "lite" ? "bg-[#18181b] border-[#fafafa]" : "bg-[#18181b]/50 border-[#27272a]"
+                  }`}>
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="text-base font-bold text-[#fafafa]">Universal Lite</h4>
-                        <p className="text-[11px] text-[#a1a1aa] mt-1">Universal Limited Analysis</p>
+                        <p className="text-[11px] text-[#a1a1aa] mt-1">Cross-Channel Tracking</p>
                       </div>
                       {currentPlan === "lite" ? (
                         <span className="text-[9px] bg-[#fafafa] text-[#09090b] font-bold px-2 py-0.5 rounded-full uppercase">Active</span>
@@ -343,54 +375,62 @@ export default function App() {
                       )}
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-mono font-bold text-[#fafafa]">$49</span>
+                      <span className="text-3xl font-mono font-bold text-[#fafafa]">$15</span>
                       <span className="text-xs text-[#a1a1aa]">/ month</span>
                     </div>
-                    <p className="text-xs text-[#a1a1aa] leading-relaxed">
-                      Analyze other creators (3-4 recommendations per channel). Limits to 10 reports monthly. Perfect for growing managers.
-                    </p>
+                    <ul className="text-xs text-[#a1a1aa] space-y-2 pt-2 border-t border-[#27272a]/60">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Everything in Personal</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Analyze other creators</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Limited competitor insights</li>
+                    </ul>
                   </div>
                   <button
-                    onClick={() => setCurrentPlan("lite")}
-                    className={`w-full py-2.5 text-xs font-semibold rounded-md transition-all ${
-                      currentPlan === "lite"
-                        ? "bg-[#fafafa] text-[#09090b]"
-                        : "bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa]"
-                    }`}
+                    onClick={() => {
+                      setCurrentPlan("lite");
+                      setError(null);
+                    }}
+                    className={`w-full py-2.5 text-xs font-semibold rounded-md transition-all ${currentPlan === "lite"
+                      ? "bg-[#fafafa] text-[#09090b]"
+                      : "bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa]"
+                      }`}
                   >
                     Get Universal Lite
                   </button>
                 </div>
 
                 {/* Universal Max Plan */}
-                <div className={`p-6 border rounded-lg flex flex-col justify-between hover:border-[#fafafa]/25 transition-all space-y-6 ${
-                  currentPlan === "max" ? "bg-[#18181b] border-[#fafafa]" : "bg-[#18181b]/50 border-[#27272a]"
-                }`}>
+                <div className={`p-6 border rounded-lg flex flex-col justify-between hover:border-[#fafafa]/25 transition-all space-y-6 ${currentPlan === "max" ? "bg-[#18181b] border-[#fafafa]" : "bg-[#18181b]/50 border-[#27272a]"
+                  }`}>
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="text-base font-bold text-[#fafafa]">Universal Max</h4>
-                        <p className="text-[11px] text-[#a1a1aa] mt-1">Full Universal Analysis</p>
+                        <p className="text-[11px] text-[#a1a1aa] mt-1">Full Creator Platform</p>
                       </div>
                       {currentPlan === "max" && (
                         <span className="text-[9px] bg-[#fafafa] text-[#09090b] font-bold px-2 py-0.5 rounded-full uppercase">Active</span>
                       )}
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-mono font-bold text-[#fafafa]">$99</span>
+                      <span className="text-3xl font-mono font-bold text-[#fafafa]">$20</span>
                       <span className="text-xs text-[#a1a1aa]">/ month</span>
                     </div>
-                    <p className="text-xs text-[#a1a1aa] leading-relaxed">
-                      Unlimited cross-channel analysis with 5-10 recommendations per channel. Advanced trends mapping and priority API access.
-                    </p>
+                    <ul className="text-xs text-[#a1a1aa] space-y-2 pt-2 border-t border-[#27272a]/60">
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Everything in Universal Lite</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Full creator & competitor analysis</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Full analytics & reports access</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-zinc-400 shrink-0" /> Unlimited recommendations</li>
+                    </ul>
                   </div>
                   <button
-                    onClick={() => setCurrentPlan("max")}
-                    className={`w-full py-2.5 text-xs font-semibold rounded-md transition-all ${
-                      currentPlan === "max"
-                        ? "bg-[#fafafa] text-[#09090b]"
-                        : "bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa]"
-                    }`}
+                    onClick={() => {
+                      setCurrentPlan("max");
+                      setError(null);
+                    }}
+                    className={`w-full py-2.5 text-xs font-semibold rounded-md transition-all ${currentPlan === "max"
+                      ? "bg-[#fafafa] text-[#09090b]"
+                      : "bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa]"
+                      }`}
                   >
                     Get Universal Max
                   </button>
@@ -518,11 +558,10 @@ export default function App() {
                       onClick={() => {
                         setActiveTab("audience");
                       }}
-                      className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                        activeTab === "audience"
-                          ? "bg-[#27272a] text-[#fafafa]"
-                          : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]/50"
-                      }`}
+                      className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all ${activeTab === "audience"
+                        ? "bg-[#27272a] text-[#fafafa]"
+                        : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]/50"
+                        }`}
                     >
                       <Users size={13} />
                       Audience Topics
@@ -531,11 +570,10 @@ export default function App() {
                       onClick={() => {
                         setActiveTab("content");
                       }}
-                      className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                        activeTab === "content"
-                          ? "bg-[#27272a] text-[#fafafa]"
-                          : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]/50"
-                      }`}
+                      className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all ${activeTab === "content"
+                        ? "bg-[#27272a] text-[#fafafa]"
+                        : "text-[#a1a1aa] hover:text-[#fafafa] hover:bg-[#18181b]/50"
+                        }`}
                     >
                       <BookOpen size={13} />
                       Content Topics
@@ -555,11 +593,10 @@ export default function App() {
                               setSelectedContentIdx(index);
                             }
                           }}
-                          className={`w-full text-left px-6 py-4 transition-all focus:outline-none ${
-                            isActive
-                              ? "bg-[#18181b] border-l-2 border-[#fafafa]"
-                              : "hover:bg-[#18181b]/50"
-                          }`}
+                          className={`w-full text-left px-6 py-4 transition-all focus:outline-none ${isActive
+                            ? "bg-[#18181b] border-l-2 border-[#fafafa]"
+                            : "hover:bg-[#18181b]/50"
+                            }`}
                         >
                           <div className="flex items-start justify-between gap-3 mb-1.5">
                             <span className="text-xs font-bold text-[#fafafa] line-clamp-1">{topic.name}</span>
@@ -592,7 +629,7 @@ export default function App() {
                 <div className="flex-1 overflow-y-auto bg-[#09090b] flex flex-col">
                   {activeTopic ? (
                     <div className="p-6 space-y-6">
-                       {/* Topic Title */}
+                      {/* Topic Title */}
                       <div className="border-b border-[#27272a] pb-5 space-y-2">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa] bg-[#18181b] border border-[#27272a] px-2.5 py-1 rounded-full">
                           {activeTab === "audience" ? "Audience Interest" : "Content Coverage"}
@@ -702,18 +739,13 @@ export default function App() {
                           <div className="flex items-center gap-4">
                             <div className="text-right">
                               <span className="text-[10px] text-[#a1a1aa] block uppercase tracking-wider font-semibold">90-Day Growth</span>
-                              <span className={`text-sm font-mono font-bold ${opp.trendData!.growth >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                              <span className="text-sm font-mono font-bold text-[#fafafa]">
                                 {opp.trendData!.growth > 0 ? "+" : ""}{opp.trendData!.growth}%
                               </span>
                             </div>
                             <div className="text-right">
                               <span className="text-[10px] text-[#a1a1aa] block uppercase tracking-wider font-semibold">Trend Status</span>
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                                opp.trendData!.status === "High Growth" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                opp.trendData!.status === "Growing" ? "bg-teal-500/10 text-teal-400 border-teal-500/20" :
-                                opp.trendData!.status === "Stable" ? "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" :
-                                "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                              }`}>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-[#27272a]/30 text-[#fafafa] border-[#27272a]">
                                 {opp.trendData!.status}
                               </span>
                             </div>
@@ -726,8 +758,8 @@ export default function App() {
                             <AreaChart data={opp.trendData!.timeline} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                               <defs>
                                 <linearGradient id={`colorValue-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor={opp.trendData!.growth >= 0 ? "#10b981" : "#f43f5e"} stopOpacity={0.2}/>
-                                  <stop offset="95%" stopColor={opp.trendData!.growth >= 0 ? "#10b981" : "#f43f5e"} stopOpacity={0.0}/>
+                                  <stop offset="5%" stopColor="#fafafa" stopOpacity={0.1} />
+                                  <stop offset="95%" stopColor="#fafafa" stopOpacity={0.0} />
                                 </linearGradient>
                               </defs>
                               <XAxis dataKey="date" tickFormatter={(str) => {
@@ -740,7 +772,7 @@ export default function App() {
                               }} tick={{ fill: '#71717a', fontSize: 10 }} />
                               <YAxis tick={{ fill: '#71717a', fontSize: 10 }} domain={[0, 100]} />
                               <RechartsTooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fafafa', fontSize: 11 }} labelStyle={{ color: '#a1a1aa' }} />
-                              <Area type="monotone" dataKey="value" stroke={opp.trendData!.growth >= 0 ? "#10b981" : "#f43f5e"} fillOpacity={1} fill={`url(#colorValue-${idx})`} strokeWidth={1.5} />
+                              <Area type="monotone" dataKey="value" stroke="#fafafa" fillOpacity={1} fill={`url(#colorValue-${idx})`} strokeWidth={1.5} />
                             </AreaChart>
                           </ResponsiveContainer>
                         </div>
@@ -905,6 +937,232 @@ export default function App() {
                 </div>
               </div>
             )}
+            {activeView === "analytics" && (
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#09090b]">
+                <div className="border-b border-[#27272a] pb-5 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-[#fafafa]">Creator Intelligence Analytics</h2>
+                    <p className="text-xs text-[#a1a1aa] mt-1">
+                      Deep-dive intelligence derived from semantic mapping of YouTube uploads and viewer comments.
+                    </p>
+                  </div>
+                  {currentPlan === "personal" && (
+                    <span className="text-[10px] bg-[#27272a] text-[#fafafa] border border-[#27272a] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                      <Sparkles size={10} /> Personal Plan Analytics
+                    </span>
+                  )}
+                  {(currentPlan === "lite" || currentPlan === "max") && (
+                    <span className="text-[10px] bg-[#27272a] text-[#fafafa] border border-[#27272a] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                      <Sparkles size={10} /> Universal Analytics
+                    </span>
+                  )}
+                </div>
+
+                {/* Gated feature overlay/warning for Universal Lite competitor analysis */}
+                {currentPlan === "lite" && (
+                  <div className="p-4 bg-[#18181b] border border-[#27272a] rounded-md flex items-center justify-between text-xs text-[#fafafa]">
+                    <div className="flex items-center gap-2">
+                      <Lock size={14} className="text-[#a1a1aa] shrink-0" />
+                      <span><strong>Competitor Insights Restricted:</strong> Upgrade to Universal Max to compare this channel against full competitor benchmarks.</span>
+                    </div>
+                    <button
+                      onClick={() => setActiveView("pricing")}
+                      className="px-3 py-1 bg-[#fafafa] text-[#09090b] font-semibold rounded text-[11px] hover:bg-[#f4f4f5] transition-colors"
+                    >
+                      Upgrade to Max
+                    </button>
+                  </div>
+                )}
+
+                {/* Key Metrics cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 bg-[#18181b]/40 border border-[#27272a] rounded-lg">
+                    <span className="text-[10px] text-[#a1a1aa] uppercase tracking-wider font-semibold">Total Videos Analyzed</span>
+                    <p className="text-2xl font-mono font-bold text-[#fafafa] mt-1">{analysisData.topVideos.length}</p>
+                  </div>
+                  <div className="p-4 bg-[#18181b]/40 border border-[#27272a] rounded-lg">
+                    <span className="text-[10px] text-[#a1a1aa] uppercase tracking-wider font-semibold">Total Comments Analyzed</span>
+                    <p className="text-2xl font-mono font-bold text-[#fafafa] mt-1">{analysisData.nlp?.commentsProcessed ?? 0}</p>
+                  </div>
+                  <div className="p-4 bg-[#18181b]/40 border border-[#27272a] rounded-lg">
+                    <span className="text-[10px] text-[#a1a1aa] uppercase tracking-wider font-semibold">Audience Overlap Score</span>
+                    <p className="text-2xl font-mono font-bold text-[#fafafa] mt-1">
+                      {Math.round(
+                        (analysisData.nlp?.audienceTopics?.length ?? 0) > 0 && (analysisData.nlp?.contentTopics?.length ?? 0) > 0
+                          ? 65 + Math.min(25, (analysisData.nlp?.audienceTopics?.length ?? 0) * 4 + (analysisData.nlp?.contentTopics?.length ?? 0) * 3)
+                          : 45
+                      )}%
+                    </p>
+                  </div>
+                  <div className="p-4 bg-[#18181b]/40 border border-[#27272a] rounded-lg">
+                    <span className="text-[10px] text-[#a1a1aa] uppercase tracking-wider font-semibold">Most Discussed Topic</span>
+                    <p className="text-sm font-semibold truncate text-[#fafafa] mt-2">
+                      {analysisData.nlp?.audienceTopics?.[0]?.name ?? "General Discussion"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Detailed Analytics widgets */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Topic distribution card list */}
+                  <div className="p-6 bg-[#18181b]/30 border border-[#27272a] rounded-lg space-y-4">
+                    <h3 className="text-sm font-bold text-[#fafafa] uppercase tracking-wider">Topic Distribution</h3>
+                    <div className="space-y-3.5">
+                      {/* Mix of content and audience topics */}
+                      {contentTopics.slice(0, 4).map((topic, i) => {
+                        const totalVideosCount = analysisData.topVideos.length || 1;
+                        const pct = Math.max(15, Math.min(95, Math.round((topic.videos.length / totalVideosCount) * 150)));
+                        return (
+                          <div key={topic.name + i} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-[#e4e4e7] font-medium">{topic.name}</span>
+                              <span className="text-[#a1a1aa] font-mono">{topic.videos.length} videos</span>
+                            </div>
+                            <div className="h-1.5 bg-[#27272a] rounded-full overflow-hidden">
+                              <div className="h-full bg-[#fafafa] rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Top Audience Interests card */}
+                  <div className="p-6 bg-[#18181b]/30 border border-[#27272a] rounded-lg space-y-4">
+                    <h3 className="text-sm font-bold text-[#fafafa] uppercase tracking-wider">Top Audience Interests</h3>
+                    <div className="space-y-3.5">
+                      {audienceTopics.slice(0, 4).map((topic, i) => {
+                        const maxComments = Math.max(...audienceTopics.map(t => t.commentCount), 1);
+                        const pct = Math.max(10, Math.min(95, Math.round((topic.commentCount / maxComments) * 90)));
+                        return (
+                          <div key={topic.name + i} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-[#e4e4e7] font-medium">{topic.name}</span>
+                              <span className="text-[#a1a1aa] font-mono">{topic.commentCount} mentions</span>
+                            </div>
+                            <div className="h-1.5 bg-[#27272a] rounded-full overflow-hidden">
+                              <div className="h-full bg-[#a1a1aa] rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Top performing videos with engagement statistics */}
+                  <div className="p-6 bg-[#18181b]/30 border border-[#27272a] rounded-lg space-y-4">
+                    <h3 className="text-sm font-bold text-[#fafafa] uppercase tracking-wider">Top Performing Videos</h3>
+                    <div className="divide-y divide-[#27272a] -my-1">
+                      {analysisData.topVideos.slice(0, 4).map((video, idx) => (
+                        <div key={video.videoId} className="py-3 flex justify-between gap-3 text-xs">
+                          <div className="min-w-0">
+                            <h4 className="font-semibold text-[#fafafa] truncate">{video.title}</h4>
+                            <p className="text-[10px] text-[#a1a1aa] mt-0.5">{formatCount(video.viewCount)} views</p>
+                          </div>
+                          <div className="text-right shrink-0 flex flex-col justify-center">
+                            <span className="font-mono text-[#e4e4e7]">{formatCount(video.likeCount)} likes</span>
+                            <span className="text-[9px] text-[#a1a1aa] font-mono">{formatCount(video.commentCount)} comments</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recommendation Opportunity Distribution & Momentum */}
+                  <div className="p-6 bg-[#18181b]/30 border border-[#27272a] rounded-lg space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#fafafa] uppercase tracking-wider">Opportunity Distribution</h3>
+                      <p className="text-[11px] text-[#a1a1aa] mt-0.5">Top performing recommendations momentum & score averages</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-[#09090b]/50 border border-[#27272a] rounded-md space-y-1">
+                        <span className="text-[9px] uppercase tracking-wider text-[#a1a1aa] font-semibold">Avg Opportunity Score</span>
+                        <p className="text-xl font-bold font-mono text-[#fafafa]">
+                          {Math.round(
+                            (analysisData.opportunities || []).reduce((acc, opp) => acc + opp.score, 0) /
+                            Math.max(1, (analysisData.opportunities || []).length)
+                          )}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-[#09090b]/50 border border-[#27272a] rounded-md space-y-1">
+                        <span className="text-[9px] uppercase tracking-wider text-[#a1a1aa] font-semibold">Momentum Summary</span>
+                        <span className="text-xs font-bold text-[#fafafa] flex items-center gap-1 mt-1">
+                          <TrendingUp size={12} /> Rising
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <span className="text-[10px] text-[#a1a1aa] uppercase tracking-wider font-semibold block">Opportunity Index</span>
+                      <div className="space-y-2">
+                        {analysisData.opportunities.slice(0, 3).map((opp, idx) => (
+                          <div key={opp.title + idx} className="flex justify-between items-center text-xs">
+                            <span className="text-[#fafafa] font-medium truncate max-w-[200px]">{opp.title}</span>
+                            <div className="flex items-center gap-2 font-mono">
+                              <span className="text-[#a1a1aa]">Score:</span>
+                              <span className="font-bold text-[#fafafa]">{opp.score}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Gated Features Upgrade UI Dialog Modal overlay (clean Upgrade Prompts instead of error screens) */}
+        {showUpgradeModal && (
+          <div className="fixed inset-0 z-50 bg-[#09090b]/80 flex items-center justify-center p-4">
+            <div className="w-full max-w-md bg-[#18181b] border border-[#27272a] rounded-lg p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-start">
+                <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-md">
+                  <Sparkles size={20} />
+                </div>
+                <button
+                  onClick={() => setShowUpgradeModal(null)}
+                  className="text-xs text-[#a1a1aa] hover:text-[#fafafa] transition-colors"
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-[#fafafa]">
+                  {showUpgradeModal === "analytics" && "Unlock Deep Analytics"}
+                  {showUpgradeModal === "other_creator" && "Analyze Other Creators"}
+                  {showUpgradeModal === "competitor" && "Unlock Competitor Benchmarks"}
+                </h3>
+                <p className="text-xs text-[#a1a1aa] leading-relaxed">
+                  {showUpgradeModal === "analytics" && "The Creator Intelligence Analytics tab is a premium feature. Upgrade to Personal or above to access overlap scores, detailed topic charts, and video performance metrics."}
+                  {showUpgradeModal === "other_creator" && "Analyzing channels other than @JerryRigEverything is restricted on Free and Personal tiers. Upgrade to Universal Lite or Universal Max to research any creator on YouTube."}
+                  {showUpgradeModal === "competitor" && "Full competitor analytics, side-by-side overlap scores, and audience share details are reserved for Universal Max subscribers. Get full platform access now."}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  onClick={() => setShowUpgradeModal(null)}
+                  className="w-full py-2.5 bg-[#27272a] hover:bg-[#27272a]/80 text-xs font-semibold rounded-md text-[#fafafa] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUpgradeModal(null);
+                    setActiveView("pricing");
+                  }}
+                  className="w-full py-2.5 bg-[#fafafa] hover:bg-[#f4f4f5] text-xs font-semibold rounded-md text-[#09090b] transition-colors"
+                >
+                  View Pricing Plans
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

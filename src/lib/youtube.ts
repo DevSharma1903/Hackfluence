@@ -330,18 +330,20 @@ function deriveOpportunities(videos: VideoItem[]): TopicOpportunity[] {
 export async function analyzeChannel(
   input: string,
   onProgress?: (msg: string) => void,
-  customGroqKey?: string
+  customGroqKey?: string,
+  maxVideos = 30
 ): Promise<AnalysisResult> {
   onProgress?.("Fetching channel data…");
   const { channelId, snippet, stats } = await resolveChannel(input);
 
   onProgress?.("Fetching recent videos…");
-  const topVideos = await getTopVideos(channelId, 30); // Analyze 15-30 recent videos
+  const topVideos = await getTopVideos(channelId, maxVideos); // Analyze 10-30 recent videos depending on tier
   console.log("[DEBUG] analyzeChannel: total videos fetched:", topVideos.length);
 
-  // Get comments from the top 15 videos to aggregate comments across the channel
+  // Get comments from the top half of the videos (up to 15) to aggregate comments across the channel
   onProgress?.("Fetching audience comments…");
-  const commentPromises = topVideos.slice(0, 15).map(async (v) => {
+  const commentsToFetch = Math.max(5, Math.min(15, Math.round(topVideos.length / 2)));
+  const commentPromises = topVideos.slice(0, commentsToFetch).map(async (v) => {
     const comments = await getVideoComments(v.videoId, 20);
     return comments.map((c) => ({ ...c, videoId: v.videoId }));
   });
