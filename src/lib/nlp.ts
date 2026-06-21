@@ -1278,28 +1278,29 @@ export async function runNlpAnalysis(
 
         const evidenceVideos: VideoItem[] = cleanedVideos.slice(0, 2);
 
-        const latentTrendData = {
-          topic: "Latent",
-          growth: 185.4,
-          status: "High Growth",
-          timeline: Array.from({ length: 91 }, (_, i) => {
-            const date = new Date();
-            date.setDate(date.getDate() - (90 - i));
-            return {
-              date: date.toISOString().split("T")[0],
-              value: Math.round(15 + (i * 0.8) + Math.sin(i / 3) * 8 + (i > 60 ? (i - 60) * 1.5 : 0))
-            };
-          })
-        };
+        const latentTrendData = await fetchTrendDataForTopic("Latent");
+
+        let trendScore = 50;
+        if (latentTrendData.status === "High Growth") trendScore = 100;
+        else if (latentTrendData.status === "Growing") trendScore = 80;
+        else if (latentTrendData.status === "Stable") trendScore = 50;
+        else if (latentTrendData.status === "Declining") trendScore = 20;
+
+        const score = Math.round(
+          0.35 * 98 +
+          0.25 * 95 +
+          0.20 * 99 +
+          0.20 * trendScore
+        );
 
         const latentOpp: TopicOpportunity = {
           title: "Latent",
-          score: 98,
+          score,
           why: "Viewer comments show unprecedented engagement and demand for 'India's Got Latent' episodes, panel chemistry, and show expansion.",
           signals: [
             "22,000+ comment mentions",
             "Strong semantic interest",
-            "Google Trends: High Growth (+185.4%)"
+            `Google Trends: ${latentTrendData.status} (${latentTrendData.growth > 0 ? "+" : ""}${latentTrendData.growth}%)`
           ],
           suggestedVideos: [
             "Behind the Scenes of India's Got Latent",
@@ -1316,7 +1317,7 @@ export async function runNlpAnalysis(
             audienceSignal: 98,
             contentAlignment: 95,
             evidenceStrength: 99,
-            trendGrowth: 100
+            trendGrowth: trendScore
           }
         };
 

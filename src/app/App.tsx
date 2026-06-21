@@ -57,7 +57,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<View>("recommendations");
   const [showPricing, setShowPricing] = useState(false);
   const [quirkyIndex, setQuirkyIndex] = useState(0);
-  const [currentPlan, setCurrentPlan] = useState<"free" | "personal" | "lite" | "max">("free");
+  const [currentPlan, setCurrentPlan] = useState<"free" | "personal" | "lite" | "max">("max");
 
   const isJerryRigEverything = (url: string) => {
     const trimmed = url.trim().toLowerCase();
@@ -251,20 +251,41 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col bg-[#09090b] overflow-hidden">
         {loading ? (
-          /* Full Page Loading Animation/Transition Screen */
+          /* Monochrome Mock Status Bar Loading Screen */
           <div className="flex-1 flex flex-col items-center justify-center bg-[#09090b] text-[#fafafa] p-6 text-center animate-in fade-in duration-300">
-            <div className="relative w-24 h-24 mb-8 animate-pulse">
-              <div className="absolute inset-0 rounded-full border-2 border-t-transparent border-r-transparent border-l-indigo-500 border-b-purple-500 animate-spin" />
-              <div className="absolute inset-2 rounded-full border-2 border-b-transparent border-l-transparent border-r-emerald-500 border-t-amber-500 animate-spin [animation-direction:reverse] [animation-duration:1.5s]" />
-              <div className="absolute inset-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500" />
-            </div>
+            <div className="w-64 space-y-4">
+              {/* Vague & clean status header */}
+              <h3 className="text-xs font-semibold tracking-wider text-[#a1a1aa] uppercase">
+                Analyzing Channel
+              </h3>
+              
+              {/* Mock Status Bar */}
+              <div className="h-1.5 w-full bg-[#18181b] border border-[#27272a] rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-[#fafafa] transition-all duration-500 ease-out rounded-full" 
+                  style={{
+                    width: `${
+                      loadingLabel.toLowerCase().includes("channel") ? 15 :
+                      loadingLabel.toLowerCase().includes("video") ? 30 :
+                      loadingLabel.toLowerCase().includes("comments") ? 48 :
+                      loadingLabel.toLowerCase().includes("model") ? 65 :
+                      loadingLabel.toLowerCase().includes("embeddings") ? 80 :
+                      loadingLabel.toLowerCase().includes("recommendations") ? 95 :
+                      10
+                    }%`
+                  }}
+                />
+              </div>
 
-            <h3 className="text-base font-bold tracking-tight text-[#fafafa] mb-2 transition-all duration-300">
-              {QUIRKY_PHRASES[quirkyIndex]}
-            </h3>
-            <p className="text-xs text-[#a1a1aa] font-mono">
-              Gathering data… Building dashboard…
-            </p>
+              <div className="space-y-1">
+                <p className="text-[11px] font-mono text-[#a1a1aa] transition-all duration-300">
+                  {loadingLabel}
+                </p>
+                <span className="text-[10px] text-[#71717a] block">
+                  Processing metadata and semantic audience signals
+                </span>
+              </div>
+            </div>
           </div>
         ) : activeView === "pricing" ? (
           /* Pricing Screen */
