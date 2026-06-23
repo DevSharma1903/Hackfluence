@@ -2,7 +2,7 @@
 
 Zukunft AI is a professional Audience Intelligence and Content Strategy Platform. It utilizes local natural language processing (BERT-based sentence transformers) to analyze YouTube channels, map creator uploads to actual viewer comment themes, validate content recommendations against public interest data, and deliver strategic growth opportunities.
 
-![Zukunft AI Dashboard Preview](./preview.png)
+![Zukunft AI Dashboard Preview](./ZAI.png)
 
 ## Core Features
 
