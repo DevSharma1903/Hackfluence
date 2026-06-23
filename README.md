@@ -52,7 +52,3 @@ To enable external Google Trends validation:
    python trends_server.py
    ```
    *Note: The backend will run on `http://127.0.0.1:8000`. If unavailable, the frontend gracefully falls back to local simulation.*
-
-## License
-
-This project is licensed under the MIT License.
