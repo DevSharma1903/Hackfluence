@@ -30,10 +30,12 @@ Zukunft AI is a professional Audience Intelligence and Content Strategy Platform
    ```bash
    npm install
    ```
-2. Create a `.env` file in the root directory and add your YouTube API Key:
+2. Create a `.env` file in the root directory and add your API credentials:
    ```env
-   VITE_YOUTUBE_API_KEY=YOUR_API_KEY_HERE
+   VITE_YOUTUBE_API_KEY=YOUR_YOUTUBE_API_KEY
+   VITE_GROQ_API_KEY=YOUR_GROQ_API_KEY  # Optional: For advanced LLM recommendations
    ```
+   *Note: If no Groq key is provided, the platform gracefully falls back to local semantic heuristics for recommendations.*
 3. Start the Vite development server:
    ```bash
    npm run dev
