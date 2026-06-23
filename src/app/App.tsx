@@ -251,7 +251,6 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col bg-[#09090b] overflow-hidden">
         {loading ? (
-          /* Monochrome Mock Status Bar Loading Screen */
           <div className="flex-1 flex flex-col items-center justify-center bg-[#09090b] text-[#fafafa] p-6 text-center animate-in fade-in duration-300">
             <div className="w-64 space-y-4">
               {/* Vague & clean status header */}
@@ -288,7 +287,6 @@ export default function App() {
             </div>
           </div>
         ) : activeView === "pricing" ? (
-          /* Pricing Screen */
           <div className="flex-1 overflow-y-auto p-12 flex flex-col justify-center items-center bg-[#09090b]">
             <div className="max-w-4xl w-full space-y-12 animate-in fade-in duration-300">
               <div className="text-center space-y-3">
@@ -464,7 +462,6 @@ export default function App() {
             </div>
           </div>
         ) : !analysisData ? (
-          /* Landing/Analyze Screen */
           <div className="flex-1 flex flex-col items-center justify-center px-6 max-w-xl mx-auto w-full">
             <div className="text-center space-y-4 mb-8">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-[#27272a] bg-[#18181b] text-xs text-[#a1a1aa]">
@@ -525,7 +522,6 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* Dashboard Screen */
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Top Bar */}
             <header className="px-6 py-5 border-b border-[#27272a] bg-[#09090b] flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1137,7 +1133,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Gated Features Upgrade UI Dialog Modal overlay (clean Upgrade Prompts instead of error screens) */}
         {showUpgradeModal && (
           <div className="fixed inset-0 z-50 bg-[#09090b]/80 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-[#18181b] border border-[#27272a] rounded-lg p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">

@@ -7,7 +7,6 @@ from pytrends.request import TrendReq
 
 app = FastAPI(title="Zukunft AI Trends Server")
 
-# Enable CORS for frontend requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,11 +16,9 @@ app.add_middleware(
 )
 
 def generate_fallback_data(topic: str):
-    # Compute a deterministic hash seed based on the topic name
     hash_val = int(hashlib.md5(topic.encode('utf-8')).hexdigest(), 16)
     rng = random.Random(hash_val)
     
-    # Pick a baseline and a growth percentage
     baseline = rng.randint(30, 70)
     growth_pct = rng.uniform(-20, 50)
     
@@ -41,9 +38,7 @@ def generate_fallback_data(topic: str):
 @app.get("/api/trends")
 async def get_trends(topic: str = Query(..., description="The recommendation topic to validate")):
     try:
-        # Initialize pytrends with a timeout
         pytrends = TrendReq(hl='en-US', tz=360, timeout=(10, 25))
-        # Build payload for the topic over the last 3 months (90 days)
         pytrends.build_payload([topic], cat=0, timeframe='today 3-m')
         df = pytrends.interest_over_time()
         
@@ -56,11 +51,9 @@ async def get_trends(topic: str = Query(..., description="The recommendation top
             val = int(row[topic])
             timeline.append({"date": date_str, "value": val})
             
-        # Ensure we have data
         if len(timeline) < 10:
             raise ValueError("Insufficient data points fetched")
             
-        # Calculate Trend Growth %: avg of last 30 days vs first 30 days
         first_30 = timeline[:30]
         last_30 = timeline[-30:]
         
@@ -75,10 +68,9 @@ async def get_trends(topic: str = Query(..., description="The recommendation top
         growth = round(growth, 1)
         
     except Exception as e:
-        print(f"[Trends Backend] Pytrends query failed for topic '{topic}'. Error: {e}. Running fallback generator.")
+        print(f"[Trends Backend] Pytrends query failed for topic '{topic}': {e}. Running fallback generator.")
         growth, timeline = generate_fallback_data(topic)
         
-    # Determine status
     if growth > 25:
         status = "High Growth"
     elif growth > 10:

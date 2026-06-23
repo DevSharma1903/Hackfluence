@@ -12,10 +12,6 @@ const BASE = "https://www.googleapis.com/youtube/v3";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const API_KEY = (import.meta as any).env?.VITE_YOUTUBE_API_KEY as string | undefined;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function getKey(): string {
   if (!API_KEY || API_KEY === "YOUR_API_KEY_HERE") {
     throw new Error(
@@ -43,14 +39,9 @@ async function ytFetch<T>(path: string, params: Record<string, string>): Promise
   return res.json() as Promise<T>;
 }
 
-// ---------------------------------------------------------------------------
-// Channel resolution  (handle / URL / channel ID → channelId)
-// ---------------------------------------------------------------------------
-
 function parseChannelInput(input: string): { type: "handle" | "id" | "username"; value: string } {
   const trimmed = input.trim();
 
-  // Full URL patterns
   const urlMatch = trimmed.match(/youtube\.com\/@([\w.-]+)/);
   if (urlMatch) return { type: "handle", value: urlMatch[1] };
 
@@ -60,13 +51,10 @@ function parseChannelInput(input: string): { type: "handle" | "id" | "username";
   const userMatch = trimmed.match(/youtube\.com\/user\/([\w.-]+)/);
   if (userMatch) return { type: "username", value: userMatch[1] };
 
-  // Plain @handle
   if (trimmed.startsWith("@")) return { type: "handle", value: trimmed.slice(1) };
 
-  // Raw channel ID
   if (trimmed.startsWith("UC") && trimmed.length >= 24) return { type: "id", value: trimmed };
 
-  // Fallback: treat as handle
   return { type: "handle", value: trimmed };
 }
 
@@ -94,7 +82,7 @@ export async function resolveChannel(
 ): Promise<{ channelId: string; snippet: ChannelSnippet; stats: ChannelStats }> {
   const parsed = parseChannelInput(input);
 
-  let params: Record<string, string> = {
+  const params: Record<string, string> = {
     part: "snippet,statistics",
     maxResults: "1",
   };
@@ -135,10 +123,6 @@ export async function resolveChannel(
   return { channelId: item.id, snippet, stats };
 }
 
-// ---------------------------------------------------------------------------
-// Top Videos
-// ---------------------------------------------------------------------------
-
 interface YtSearchResponse {
   items?: Array<{
     id: { kind: string; videoId?: string };
@@ -168,7 +152,6 @@ export async function getTopVideos(
   channelId: string,
   maxResults = 50
 ): Promise<VideoItem[]> {
-  // search for recent videos on the channel
   const search = await ytFetch<YtSearchResponse>("search", {
     part: "snippet",
     channelId,
@@ -177,48 +160,24 @@ export async function getTopVideos(
     maxResults: String(maxResults),
   });
 
-  console.log("[DEBUG] getTopVideos: Raw Search API response:", JSON.stringify(search, null, 2));
-
-  let hasVideoIdCount = 0;
-  let isYoutubeVideoKindCount = 0;
-  if (search.items) {
-    for (const item of search.items) {
-      if (item.id?.videoId) hasVideoIdCount++;
-      if (item.id?.kind === "youtube#video") isYoutubeVideoKindCount++;
-    }
-  }
-  console.log("[DEBUG] getTopVideos: Search items count:", search.items?.length || 0);
-  console.log("[DEBUG] getTopVideos: Items with id.videoId present:", hasVideoIdCount);
-  console.log("[DEBUG] getTopVideos: Items with id.kind === 'youtube#video':", isYoutubeVideoKindCount);
-
   if (!search.items || search.items.length === 0) return [];
 
-  // Filter so ONLY youtube#video entries with valid videoId are used
   const validItems = search.items.filter(
     (item) => item.id?.kind === "youtube#video" && typeof item.id?.videoId === "string"
   );
-  console.log("[DEBUG] getTopVideos: Valid video count (after filtering):", validItems.length);
 
   const validVideoIds = validItems.map((item) => item.id.videoId as string);
   const videoIds = validVideoIds.join(",");
 
-  console.log("[DEBUG] getTopVideos: Final ID count (valid video IDs count):", validVideoIds.length);
-  console.log("[DEBUG] getTopVideos: Exact ID string being sent to videos.list:", videoIds);
-
   const statsMap = new Map<string, YtVideoStatistics>();
-  let statsItemsCount = 0;
 
   if (videoIds) {
-    // Fetch statistics for those videos
     const stats = await ytFetch<YtVideoListResponse>("videos", {
       part: "statistics",
       id: videoIds,
     });
-    statsItemsCount = stats.items?.length || 0;
     for (const v of stats.items ?? []) statsMap.set(v.id, v.statistics);
   }
-
-  console.log("[DEBUG] getTopVideos: Stats API returned items count:", statsItemsCount);
 
   return validItems.map((item) => {
     const videoId = item.id.videoId as string;
@@ -238,10 +197,6 @@ export async function getTopVideos(
     };
   });
 }
-
-// ---------------------------------------------------------------------------
-// Comments
-// ---------------------------------------------------------------------------
 
 interface YtCommentThreadsResponse {
   items?: Array<{
@@ -283,14 +238,9 @@ export async function getVideoComments(
       };
     });
   } catch {
-    // Comments disabled on some videos — return empty gracefully
     return [];
   }
 }
-
-// ---------------------------------------------------------------------------
-// Derive topic opportunities from videos (simple heuristic)
-// ---------------------------------------------------------------------------
 
 function deriveOpportunities(videos: VideoItem[]): TopicOpportunity[] {
   if (videos.length === 0) return [];
@@ -303,7 +253,6 @@ function deriveOpportunities(videos: VideoItem[]): TopicOpportunity[] {
     const growthPct = Math.max(10, pct - i * 5);
     const validation: "Strong" | "Moderate" = score >= 80 ? "Strong" : "Moderate";
 
-    // Extract short topic name from title (first 3 meaningful words)
     const words = video.title.replace(/[^a-zA-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
     const shortTitle = words.slice(0, 4).join(" ");
 
@@ -323,10 +272,6 @@ function deriveOpportunities(videos: VideoItem[]): TopicOpportunity[] {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Main analysis entry point
-// ---------------------------------------------------------------------------
-
 export async function analyzeChannel(
   input: string,
   onProgress?: (msg: string) => void,
@@ -337,10 +282,8 @@ export async function analyzeChannel(
   const { channelId, snippet, stats } = await resolveChannel(input);
 
   onProgress?.("Fetching recent videos…");
-  const topVideos = await getTopVideos(channelId, maxVideos); // Analyze 10-30 recent videos depending on tier
-  console.log("[DEBUG] analyzeChannel: total videos fetched:", topVideos.length);
+  const topVideos = await getTopVideos(channelId, maxVideos);
 
-  // Get comments from the top half of the videos (up to 15) to aggregate comments across the channel
   onProgress?.("Fetching audience comments…");
   const commentsToFetch = Math.max(5, Math.min(15, Math.round(topVideos.length / 2)));
   const commentPromises = topVideos.slice(0, commentsToFetch).map(async (v) => {
@@ -349,7 +292,6 @@ export async function analyzeChannel(
   });
   const commentResults = await Promise.all(commentPromises);
   const topComments = commentResults.flat();
-  console.log("[DEBUG] analyzeChannel: total raw comments fetched:", topComments.length);
 
   const opportunities = deriveOpportunities(topVideos);
 
@@ -362,6 +304,5 @@ export async function analyzeChannel(
     analyzedAt: new Date().toISOString(),
   };
 
-  // Run NLP analysis (sentence transformers)
   return runNlpAnalysis(baseResult, onProgress, customGroqKey);
 }
