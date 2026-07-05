@@ -268,6 +268,9 @@ function deriveOpportunities(videos: VideoItem[]): TopicOpportunity[] {
         video.commentCount > 0 ? `${video.commentCount.toLocaleString()} comments` : "Limited comments",
       ],
       tags: words.slice(0, 4),
+      suggestedVideos: [],
+      evidenceComments: [],
+      evidenceVideos: [video],
     };
   });
 }
