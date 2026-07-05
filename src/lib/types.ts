@@ -32,16 +32,44 @@ export interface CommentThread {
   text: string;
   likeCount: number;
   publishedAt: string;
+  videoId?: string;
 }
 
 export interface TopicOpportunity {
   title: string;
   score: number;
-  growth: string;
-  validation: "Strong" | "Moderate";
+  growth?: string;
+  validation?: "Strong" | "Moderate";
   why: string;
   signals: string[];
-  tags: string[];
+  tags?: string[];
+  suggestedVideos: string[];
+  evidenceComments: CommentThread[];
+  evidenceVideos: VideoItem[];
+  scoreBreakdown?: {
+    audienceStrength: number;
+    contentRelevance: number;
+    supportingEvidence: number;
+    audienceSignal?: number;
+    contentAlignment?: number;
+    evidenceStrength?: number;
+    trendGrowth?: number;
+  };
+  trendData?: {
+    growth: number;
+    status: string;
+    timeline: { date: string; value: number }[];
+  };
+}
+
+export interface DiscoveredTopic {
+  name: string;
+  commentCount: number;
+  comments: CommentThread[];
+  videos: VideoItem[];
+  isInferred?: boolean;
+  inferredNote?: string;
+  explanation?: string;
 }
 
 export interface AnalysisResult {
@@ -56,6 +84,9 @@ export interface AnalysisResult {
     topSentences: ExtractedSentence[];
     trends: TrendTerm[];
     modelUsed: string;
+    contentTopics?: DiscoveredTopic[];
+    audienceTopics?: DiscoveredTopic[];
+    commentsProcessed?: number;
   };
 }
 export interface ExtractedSentence {
