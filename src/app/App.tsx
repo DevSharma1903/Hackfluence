@@ -62,8 +62,8 @@ function StrengthBadge({ strength }: { strength: string }) {
   return (
     <span
       className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${isStrong
-          ? "text-emerald-400 bg-emerald-500/8 border-emerald-500/15"
-          : "text-amber-400 bg-amber-500/8 border-amber-500/15"
+        ? "text-emerald-400 bg-emerald-500/8 border-emerald-500/15"
+        : "text-amber-400 bg-amber-500/8 border-amber-500/15"
         }`}
     >
       <span
@@ -405,8 +405,8 @@ function DashboardScreen({
               <div className="flex flex-col items-center gap-2">
                 <div
                   className={`rounded-lg px-3 py-2 text-xs font-medium text-center max-w-[120px] leading-snug ${i === 0
-                      ? "bg-accent/10 text-accent border border-accent/20"
-                      : "bg-secondary text-muted-foreground border border-border"
+                    ? "bg-accent/10 text-accent border border-accent/20"
+                    : "bg-secondary text-muted-foreground border border-border"
                     }`}
                 >
                   {step}
@@ -466,7 +466,7 @@ function TopicsScreen({ data }: { data: AnalysisResult }) {
           {
             label: "Top Video Views",
             value: topVideo ? formatCount(topVideo.viewCount) : "—",
-            sub: topVideo?.title?.slice(0, 30) + "…" ?? "",
+            sub: topVideo?.title ? topVideo.title.slice(0, 30) + "…" : "",
             positive: true,
           },
           {
@@ -904,15 +904,13 @@ function NlpScreen({ data }: { data: AnalysisResult }) {
                 </td>
                 <td className="px-5 py-3">
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${
-                      tr.momentum === "Rising"
-                        ? "text-emerald-400 bg-emerald-500/8 border-emerald-500/15"
-                        : "text-slate-400 bg-slate-500/8 border-slate-500/15"
-                    }`}
+                    className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${tr.momentum === "Rising"
+                      ? "text-emerald-400 bg-emerald-500/8 border-emerald-500/15"
+                      : "text-slate-400 bg-slate-500/8 border-slate-500/15"
+                      }`}
                   >
-                    <span className={`w-1 h-1 rounded-full ${
-                      tr.momentum === "Rising" ? "bg-emerald-400" : "bg-slate-400"
-                    }`} />
+                    <span className={`w-1 h-1 rounded-full ${tr.momentum === "Rising" ? "bg-emerald-400" : "bg-slate-400"
+                      }`} />
                     {tr.momentum}
                   </span>
                 </td>
@@ -936,8 +934,8 @@ function NlpScreen({ data }: { data: AnalysisResult }) {
               s.source === "title"
                 ? "text-indigo-400 bg-indigo-500/8 border-indigo-500/15"
                 : s.source === "description"
-                ? "text-violet-400 bg-violet-500/8 border-violet-500/15"
-                : "text-amber-400 bg-amber-500/8 border-amber-500/15";
+                  ? "text-violet-400 bg-violet-500/8 border-violet-500/15"
+                  : "text-amber-400 bg-amber-500/8 border-amber-500/15";
             return (
               <div
                 key={i}
@@ -1039,10 +1037,10 @@ export default function App() {
                 onClick={() => !locked && setScreen(item.id)}
                 disabled={locked}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left ${active
-                    ? "bg-accent/10 text-accent font-medium"
-                    : locked
-                      ? "text-muted-foreground/40 cursor-not-allowed"
-                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                  ? "bg-accent/10 text-accent font-medium"
+                  : locked
+                    ? "text-muted-foreground/40 cursor-not-allowed"
+                    : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
                   }`}
               >
                 <span className={active ? "text-accent" : locked ? "text-muted-foreground/40" : "text-muted-foreground"}>
